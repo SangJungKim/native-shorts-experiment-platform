@@ -394,9 +394,7 @@ function Login() {
       <section className={styles.loginIntro}>
         <p className={styles.eyebrow}>Scientific authoring environment</p>
         <h1>Study short-video exposure in a controlled, realistic social media environment.</h1>
-        <p>
-          Configure conditions, preserve original YouTube URLs, and keep displayed social signals separate from participant behavior.
-        </p>
+        <p>Create Experimental Conditions, Add YouTube Shorts, and Track Participant Engagement</p>
       </section>
       <form className={styles.authCard} onSubmit={submit}>
         <p className={styles.eyebrow}>Researcher sign in</p>
