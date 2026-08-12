@@ -393,7 +393,7 @@ function Login() {
     <main className={styles.loginPage}>
       <section className={styles.loginIntro}>
         <p className={styles.eyebrow}>Scientific authoring environment</p>
-        <h1>Build controlled short-video experiments with transparent stimulus data.</h1>
+        <h1>Study short-video exposure in a controlled, realistic social media environment.</h1>
         <p>
           Configure conditions, preserve original YouTube URLs, and keep displayed social signals separate from participant behavior.
         </p>
