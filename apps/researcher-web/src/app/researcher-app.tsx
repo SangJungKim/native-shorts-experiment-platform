@@ -394,7 +394,8 @@ function Login() {
       <section className={styles.loginIntro}>
         <p className={styles.eyebrow}>Scientific authoring environment</p>
         <h1>Study short-video exposure in a controlled, realistic social media environment.</h1>
-        <p>Create Experimental Conditions, Add YouTube Shorts, and Track Participant Engagement</p>
+        <p className={styles.loginSubline}>Create Experimental Conditions, Add YouTube Shorts, and Track Participant Engagement</p>
+        <p className={styles.loginByline}>Created by: Sang Jung Kim</p>
       </section>
       <form className={styles.authCard} onSubmit={submit}>
         <p className={styles.eyebrow}>Researcher sign in</p>

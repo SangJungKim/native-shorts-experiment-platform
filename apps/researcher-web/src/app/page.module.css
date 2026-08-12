@@ -98,7 +98,8 @@
 .loginPage { min-height: 100vh; background: #12231d; color: #f5f5ed; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(340px, 480px); align-items: center; gap: 8vw; padding: 8vw; }
 .loginIntro { max-width: 680px; }
 .loginIntro h1 { font-size: clamp(38px, 6vw, 73px); }
-.loginIntro > p:last-child { color: #afc2b7; line-height: 1.7; margin-top: 24px; max-width: 580px; }
+.loginSubline { color: #afc2b7; line-height: 1.7; margin-top: 24px; max-width: 580px; }
+.loginByline { color: #82998c; font-size: 12px; letter-spacing: .04em; margin-top: 16px; }
 .authCard { padding: 28px; color: #17201d; display: grid; gap: 16px; }
 .authCard h2 { font-family: Georgia, serif; font-size: 30px; }
 .authCard button { width: 100%; }
