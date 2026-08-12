@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "participant-mobile",
-    "slug": "participant-mobile",
+    "name": "Native Shorts Participant",
+    "slug": "native-shorts-participant",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -38,6 +38,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5080c474-c7b7-42eb-a439-49dd87f5e37e"
+      }
+    },
+    "owner": "sangjung-kims-team"
   }
 }
