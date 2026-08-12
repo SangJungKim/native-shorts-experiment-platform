@@ -610,6 +610,29 @@ function ExperimentEditor({
   const [permanentDeleteName, setPermanentDeleteName] = useState("");
   const experimentCreatorProfiles = creatorProfiles.filter((profile) => profile.experiment_id === experiment.id);
 
+  const downloadSampleParticipantCsv = () => {
+    const headers = ["participant_id", "condition_id", "condition", "session_status", "post_name", "video_title", "youtube_video_id", "original_youtube_url", "presentation_position", "like_final", "like_ever", "reposted_final", "repost_ever", "comments_opened_count", "comment_submitted", "participant_comment_count", "any_affordance_interaction"];
+    const sampleRows = [
+      ["sample-participant-01", "sample-condition-a", "Control", "completed", "Sample Post A", "Sample video A", "l0un24OLf_8", "https://www.youtube.com/shorts/l0un24OLf_8?feature=share", 1, true, true, false, false, 1, false, 0, true],
+      ["sample-participant-01", "sample-condition-a", "Control", "completed", "Sample Post B", "Sample video B", "SZJS4EohvMg", "https://www.youtube.com/shorts/SZJS4EohvMg?feature=share", 2, false, false, true, true, 0, false, 0, true],
+      ["sample-participant-02", "sample-condition-b", "High social signals", "completed", "Sample Post A", "Sample video A", "l0un24OLf_8", "https://www.youtube.com/shorts/l0un24OLf_8?feature=share", 2, false, true, false, false, 2, true, 1, true],
+      ["sample-participant-02", "sample-condition-b", "High social signals", "completed", "Sample Post C", "Sample video C", "2VWoUEoe0dU", "https://www.youtube.com/shorts/2VWoUEoe0dU?feature=share", 1, false, false, false, false, 0, false, 0, false],
+      ["sample-participant-03", "sample-condition-a", "Control", "interrupted", "Sample Post A", "Sample video A", "l0un24OLf_8", "https://www.youtube.com/shorts/l0un24OLf_8?feature=share", 1, false, false, false, true, 1, false, 0, true],
+      ["sample-participant-03", "sample-condition-a", "Control", "interrupted", "Sample Post B", "Sample video B", "SZJS4EohvMg", "https://www.youtube.com/shorts/SZJS4EohvMg?feature=share", 2, true, true, true, true, 3, true, 2, true],
+      ["sample-participant-04", "sample-condition-b", "High social signals", "active", "Sample Post B", "Sample video B", "SZJS4EohvMg", "https://www.youtube.com/shorts/SZJS4EohvMg?feature=share", 1, false, false, false, false, 1, false, 0, true],
+      ["sample-participant-04", "sample-condition-b", "High social signals", "active", "Sample Post C", "Sample video C", "2VWoUEoe0dU", "https://www.youtube.com/shorts/2VWoUEoe0dU?feature=share", 2, true, true, false, true, 0, false, 0, true],
+      ["sample-participant-05", "sample-condition-a", "Control", "completed", "Sample Post B", "Sample video B", "SZJS4EohvMg", "https://www.youtube.com/shorts/SZJS4EohvMg?feature=share", 2, false, false, false, false, 0, false, 0, false],
+      ["sample-participant-05", "sample-condition-a", "Control", "completed", "Sample Post C", "Sample video C", "2VWoUEoe0dU", "https://www.youtube.com/shorts/2VWoUEoe0dU?feature=share", 1, true, true, true, true, 2, true, 1, true],
+    ];
+    const escapeCsv = (value: unknown) => `"${String(value).replaceAll('"', '""')}"`;
+    const csv = `\uFEFF${[headers, ...sampleRows].map((row) => row.map(escapeCsv).join(",")).join("\n")}\n`;
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.download = "SAMPLE_DO_NOT_ANALYZE_participant_engagement.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   const downloadParticipantCsv = async () => {
     await runAction(async () => {
       const sessionResult = await supabase.from("sessions").select("id,participant_id,publication_snapshot_id,publication_condition_id,status").eq("experiment_id", experiment.id);
@@ -771,6 +794,7 @@ function ExperimentEditor({
         <div className={styles.publishActions}>
           {studyCode && <span className={styles.studyCode}>Study code <strong>{studyCode}</strong></span>}
           <span className={styles.statusBadge}>{experiment.status}</span>
+          <button title="Fictional demonstration data: exactly 10 rows, never participant records" type="button" onClick={downloadSampleParticipantCsv}>Download sample engagement CSV (10 rows)</button>
           <button disabled={busy} title="One row per participant × activated Post" type="button" onClick={() => void downloadParticipantCsv()}>Download participant engagement CSV</button>
           <button disabled={busy} title="Long-form export with one row per participant-submitted comment" type="button" onClick={() => void downloadParticipantCommentsCsv()}>Download participant comments CSV</button>
           <button disabled={busy || experiment.status === "archived"} type="button" onClick={() => {
