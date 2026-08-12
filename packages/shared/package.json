@@ -1,0 +1,6 @@
+{
+  "name": "@virality-experiment/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reserved for framework-independent shared types and research-domain logic."
+}
