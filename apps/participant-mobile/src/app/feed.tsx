@@ -1,5 +1,4 @@
 import { useLocalSearchParams, router } from "expo-router";
-import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +19,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Svg, { Circle, Path, Polyline } from "react-native-svg";
 import YoutubePlayer, { PLAYER_STATES, YoutubeIframeRef } from "react-native-youtube-iframe";
 import { supabase } from "@/lib/supabase";
 
@@ -36,6 +36,49 @@ type Session = {
   time_display: TimeDisplay;
 };
 type TimeDisplay = "hidden" | "progress_only" | "elapsed" | "remaining" | "progress_elapsed" | "progress_remaining";
+
+function HeartAffordance({ selected }: { selected: boolean }) {
+  const color = selected ? "#ff3040" : "#ffffff";
+  return (
+    <Svg accessibilityElementsHidden height={35} viewBox="0 0 24 24" width={35}>
+      <Path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"
+        fill={selected ? color : "none"}
+        stroke={color}
+        strokeLinejoin="round"
+        strokeWidth={selected ? 1.7 : 2}
+      />
+    </Svg>
+  );
+}
+
+function CommentAffordance() {
+  return (
+    <Svg accessibilityElementsHidden height={34} viewBox="0 0 24 24" width={34}>
+      <Path
+        d="M12 2.5c-5.8 0-10.5 4.04-10.5 9s4.7 9 10.5 9c2.22 0 4.28-.59 5.98-1.59L22.5 21l-1.84-4.3c1.17-1.47 1.84-3.25 1.84-5.2 0-4.96-4.7-9-10.5-9Z"
+        fill="none"
+        stroke="#ffffff"
+        strokeLinejoin="round"
+        strokeWidth={1.9}
+      />
+    </Svg>
+  );
+}
+
+function RepostAffordance({ selected }: { selected: boolean }) {
+  const color = selected ? "#00c853" : "#ffffff";
+  return (
+    <Svg accessibilityElementsHidden height={35} viewBox="0 0 24 24" width={35}>
+      <Path d="M5 8a3 3 0 0 1 3-3h10" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} />
+      <Polyline fill="none" points="15,2 18,5 15,8" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} />
+      <Path d="M19 16a3 3 0 0 1-3 3H6" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} />
+      <Polyline fill="none" points="9,22 6,19 9,16" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} />
+      {selected ? <><Circle cx={18.2} cy={17.8} fill={color} r={4.1} /><Polyline fill="none" points="16.3,17.8 17.6,19.1 20.2,16.5" stroke="#ffffff" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.45} /></> : null}
+    </Svg>
+  );
+}
+
 type FeedPost = {
   id: string;
   original_youtube_url: string;
@@ -394,25 +437,15 @@ export default function AssignedFeedScreen() {
                 )}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
-                    <SymbolView
-                      animationSpec={state.liked ? { effect: { type: "bounce" } } : undefined}
-                      name={{ ios: state.liked ? "heart.fill" : "heart", android: state.liked ? "favorite" : "favorite_border", web: state.liked ? "favorite" : "favorite_border" }}
-                      size={34}
-                      tintColor={state.liked ? "#ff3040" : "#ffffff"}
-                    />
+                    <HeartAffordance selected={state.liked} />
                     <Text style={styles.count}>{(post.display_likes + (state.liked ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel="Open comments" onPress={() => void openComments(post)} style={styles.actionButton}>
-                    <SymbolView name={{ ios: "bubble.right", android: "chat_bubble_outline", web: "chat_bubble_outline" }} size={32} tintColor="#ffffff" />
+                    <CommentAffordance />
                     <Text style={styles.count}>{postCommentCount}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel={state.reposted ? "Undo repost" : "Repost"} onPress={() => void toggleRepost(post)} style={styles.actionButton}>
-                    <SymbolView
-                      animationSpec={state.reposted ? { effect: { type: "bounce" } } : undefined}
-                      name={{ ios: "arrow.2.squarepath", android: "repeat", web: "repeat" }}
-                      size={34}
-                      tintColor={state.reposted ? "#00c853" : "#ffffff"}
-                    />
+                    <RepostAffordance selected={state.reposted} />
                     <Text style={styles.count}>{(post.display_shares + (state.reposted ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                 </View>
