@@ -1,4 +1,5 @@
 import { useLocalSearchParams, router } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -393,13 +394,26 @@ export default function AssignedFeedScreen() {
                 )}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
-                    <Text style={[styles.heartIcon, state.liked && styles.liked]}>{state.liked ? "♥" : "♡"}</Text><Text style={styles.count}>{(post.display_likes + (state.liked ? 1 : 0)).toLocaleString()}</Text>
+                    <SymbolView
+                      animationSpec={state.liked ? { effect: { type: "bounce" } } : undefined}
+                      name={{ ios: state.liked ? "heart.fill" : "heart", android: state.liked ? "favorite" : "favorite_border", web: state.liked ? "favorite" : "favorite_border" }}
+                      size={34}
+                      tintColor={state.liked ? "#ff3040" : "#ffffff"}
+                    />
+                    <Text style={styles.count}>{(post.display_likes + (state.liked ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel="Open comments" onPress={() => void openComments(post)} style={styles.actionButton}>
-                    <View style={styles.commentIcon}><View style={styles.commentTail} /></View><Text style={styles.count}>{postCommentCount}</Text>
+                    <SymbolView name={{ ios: "bubble.right", android: "chat_bubble_outline", web: "chat_bubble_outline" }} size={32} tintColor="#ffffff" />
+                    <Text style={styles.count}>{postCommentCount}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel={state.reposted ? "Undo repost" : "Repost"} onPress={() => void toggleRepost(post)} style={styles.actionButton}>
-                    <Text style={[styles.repostIcon, state.reposted && styles.shared]}>⇄</Text><Text style={styles.count}>{(post.display_shares + (state.reposted ? 1 : 0)).toLocaleString()}</Text>
+                    <SymbolView
+                      animationSpec={state.reposted ? { effect: { type: "bounce" } } : undefined}
+                      name={{ ios: "arrow.2.squarepath", android: "repeat", web: "repeat" }}
+                      size={34}
+                      tintColor={state.reposted ? "#00c853" : "#ffffff"}
+                    />
+                    <Text style={styles.count}>{(post.display_shares + (state.reposted ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                 </View>
                 {post.creator_display_name && post.creator_handle ? <View style={styles.creatorOverlay}>
@@ -472,12 +486,7 @@ const styles = StyleSheet.create({
   creatorHandle: { color: "white", fontSize: 11 },
   creatorDescription: { color: "white", fontSize: 10, marginTop: 2 },
   actionButton: { alignItems: "center", backgroundColor: "transparent", minHeight: 48, minWidth: 46, paddingHorizontal: 4, paddingVertical: 2 },
-  heartIcon: { color: "white", fontSize: 38, fontWeight: "300", lineHeight: 39 },
-  liked: { color: "#ff2d55" }, shared: { color: "#34c759" },
   count: { color: "white", fontSize: 11, fontWeight: "700", marginTop: 1 },
-  commentIcon: { borderColor: "white", borderRadius: 13, borderWidth: 2.4, height: 25, marginBottom: 5, width: 29 },
-  commentTail: { backgroundColor: "transparent", borderBottomColor: "white", borderBottomWidth: 2.4, borderRightColor: "white", borderRightWidth: 2.4, bottom: -4, height: 9, position: "absolute", right: 1, transform: [{ rotate: "28deg" }], width: 8 },
-  repostIcon: { color: "white", fontSize: 36, fontWeight: "500", lineHeight: 37 },
   center: { alignItems: "center", backgroundColor: "#10231c", flex: 1, gap: 14, justifyContent: "center", padding: 24 },
   centerText: { color: "white" }, error: { color: "#ffb6af", fontSize: 15, textAlign: "center" },
   endedTitle: { color: "white", fontSize: 23, fontWeight: "800", textAlign: "center" },
