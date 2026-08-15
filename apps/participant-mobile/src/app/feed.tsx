@@ -393,13 +393,13 @@ export default function AssignedFeedScreen() {
                 )}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
-                    <Text style={[styles.actionIcon, state.liked && styles.liked]}>♥</Text><Text style={styles.count}>{(post.display_likes + (state.liked ? 1 : 0)).toLocaleString()}</Text>
+                    <Text style={[styles.heartIcon, state.liked && styles.liked]}>{state.liked ? "♥" : "♡"}</Text><Text style={styles.count}>{(post.display_likes + (state.liked ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel="Open comments" onPress={() => void openComments(post)} style={styles.actionButton}>
-                    <Text style={styles.commentIcon}>◯</Text><Text style={styles.count}>{postCommentCount}</Text>
+                    <View style={styles.commentIcon}><View style={styles.commentTail} /></View><Text style={styles.count}>{postCommentCount}</Text>
                   </Pressable>
                   <Pressable accessibilityLabel={state.reposted ? "Undo repost" : "Repost"} onPress={() => void toggleRepost(post)} style={styles.actionButton}>
-                    <View style={styles.shareIcon}><Text style={[styles.actionIcon, state.reposted && styles.shared]}>↻</Text>{state.reposted ? <Text style={styles.check}>✓</Text> : null}</View><Text style={styles.count}>{(post.display_shares + (state.reposted ? 1 : 0)).toLocaleString()}</Text>
+                    <Text style={[styles.repostIcon, state.reposted && styles.shared]}>⇄</Text><Text style={styles.count}>{(post.display_shares + (state.reposted ? 1 : 0)).toLocaleString()}</Text>
                   </Pressable>
                 </View>
                 {post.creator_display_name && post.creator_handle ? <View style={styles.creatorOverlay}>
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   page: { alignItems: "center", backgroundColor: "#111", justifyContent: "center" },
   playerFrame: { alignItems: "center", backgroundColor: "#000", borderColor: "#222", borderWidth: 1, justifyContent: "center", overflow: "hidden" },
   suspended: { backgroundColor: "#000", flex: 1, width: "100%" },
-  actions: { bottom: 18, gap: 10, position: "absolute", right: 10 },
+  actions: { bottom: 18, gap: 14, position: "absolute", right: 11 },
   creatorOverlay: { alignItems: "center", bottom: 18, flexDirection: "row", left: 12, maxWidth: "70%", position: "absolute" },
   creatorImage: { borderColor: "white", borderRadius: 21, borderWidth: 1, height: 42, width: 42 },
   creatorFallback: { alignItems: "center", backgroundColor: "#315743", borderColor: "white", borderRadius: 21, borderWidth: 1, height: 42, justifyContent: "center", width: 42 },
@@ -471,13 +471,13 @@ const styles = StyleSheet.create({
   creatorName: { color: "white", fontSize: 13, fontWeight: "800" },
   creatorHandle: { color: "white", fontSize: 11 },
   creatorDescription: { color: "white", fontSize: 10, marginTop: 2 },
-  actionButton: { alignItems: "center", backgroundColor: "rgba(0,0,0,.64)", borderRadius: 18, minWidth: 54, paddingHorizontal: 8, paddingVertical: 7 },
-  actionIcon: { color: "white", fontSize: 25, lineHeight: 28 },
+  actionButton: { alignItems: "center", backgroundColor: "transparent", minHeight: 48, minWidth: 46, paddingHorizontal: 4, paddingVertical: 2 },
+  heartIcon: { color: "white", fontSize: 38, fontWeight: "300", lineHeight: 39 },
   liked: { color: "#ff2d55" }, shared: { color: "#34c759" },
-  count: { color: "white", fontSize: 9, fontWeight: "700" },
-  commentIcon: { borderColor: "white", borderRadius: 20, borderWidth: 2, color: "transparent", fontSize: 19, height: 22, transform: [{ scaleX: 1.08 }], width: 25 },
-  shareIcon: { alignItems: "center", height: 29, justifyContent: "center", width: 32 },
-  check: { color: "white", fontSize: 12, fontWeight: "900", position: "absolute" },
+  count: { color: "white", fontSize: 11, fontWeight: "700", marginTop: 1 },
+  commentIcon: { borderColor: "white", borderRadius: 13, borderWidth: 2.4, height: 25, marginBottom: 5, width: 29 },
+  commentTail: { backgroundColor: "transparent", borderBottomColor: "white", borderBottomWidth: 2.4, borderRightColor: "white", borderRightWidth: 2.4, bottom: -4, height: 9, position: "absolute", right: 1, transform: [{ rotate: "28deg" }], width: 8 },
+  repostIcon: { color: "white", fontSize: 36, fontWeight: "500", lineHeight: 37 },
   center: { alignItems: "center", backgroundColor: "#10231c", flex: 1, gap: 14, justifyContent: "center", padding: 24 },
   centerText: { color: "white" }, error: { color: "#ffb6af", fontSize: 15, textAlign: "center" },
   endedTitle: { color: "white", fontSize: 23, fontWeight: "800", textAlign: "center" },
