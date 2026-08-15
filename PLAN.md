@@ -134,6 +134,24 @@ Implementation is complete; physical-device acceptance remains pending.
 - The external smoke-test checklist passes and known measurement limitations are shown to reviewers.
 - `STATUS.md` records hosted project/build identifiers without recording secrets.
 
+## Milestone 5W — Mobile participant web demo
+
+### Work
+
+- Export the existing Expo participant interface for web without creating a divergent participant design.
+- Deploy it as a separate public mobile-web project connected to hosted Supabase.
+- Preserve study-code entry, anonymous assignment, feed presentation, creator overlays, interactions, comments, and condition time display.
+- Validate browser-specific YouTube playback and lifecycle behavior on physical iOS and Android devices.
+
+### Acceptance criteria
+
+- A participant can open a public URL without Expo, TestFlight, or researcher credentials and enter a valid study code.
+- The web interface visually matches the native participant application at representative phone viewport sizes.
+- Direct navigation and refresh work for the study-code and assigned-feed routes.
+- Anonymous identity, assignment, and realized Post order persist across ordinary reloads in the same browser profile.
+- Physical mobile-browser testing covers autoplay fallback, swipe paging, pause/audio isolation, revisit-to-zero, comments, interactions, background/foreground behavior, and browser-storage clearing.
+- The web delivery remains labeled as a demo until its timing and playback behavior are independently validated; native results are not generalized to web.
+
 ## Milestone 6 — Implement exposure and attention measurement
 
 ### Work

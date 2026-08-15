@@ -21,6 +21,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspace @virality-experiment/researcher-web",
+    "build:participant-web": "npm run build:web --workspace @virality-experiment/participant-mobile",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {

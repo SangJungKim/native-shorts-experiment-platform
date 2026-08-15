@@ -45,7 +45,26 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_CLIENT_SAFE_PUBLISHABLE_KEY
 
 Test sign-in, authoring, publication, preview, creator-image upload, study deactivation, and CSV downloads from a computer other than the development Mac.
 
-## 4. Expo project and preview environment
+## 4. Participant mobile-web demo
+
+Create a second Vercel project from the same GitHub repository with these settings:
+
+- Project/root directory: `apps/participant-mobile`
+- Framework preset: Other
+- Install command: `npm install`
+- Build command: `npm run build:web`
+- Output directory: `dist`
+
+Set these build-time environment variables for Production, Preview, and Development:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_CLIENT_SAFE_PUBLISHABLE_KEY
+```
+
+The participant web project must be publicly reachable without Vercel authentication. Participants enter only a study code and never receive researcher credentials. Validate it on physical mobile Safari and Chrome before sharing it as anything beyond a workflow/playback demo. The native and web deliveries share the Expo interface, but browser behavior requires independent autoplay, swipe, visibility, storage, audio-isolation, and timing validation.
+
+## 5. Expo project and preview environment
 
 The iOS bundle identifier is `com.sangjungkim.viralityexperiment.participant`.
 
@@ -60,7 +79,7 @@ npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KE
 
 Enter only the hosted client-safe Supabase values. Do not paste service-role credentials.
 
-## 5. TestFlight demo
+## 6. TestFlight demo
 
 This requires the project owner's Expo account, Apple Developer membership, App Store Connect access, and explicit signing choices.
 
@@ -72,7 +91,7 @@ npx eas-cli submit --platform ios --profile researcher-demo
 
 Use an internal TestFlight group first. After validation, invite the intended external researchers and complete any beta-review requirements shown in App Store Connect.
 
-## 6. External smoke test
+## 7. External smoke test
 
 1. An invited researcher can sign in at the public website.
 2. A researcher can create, preview, publish, and retrieve a study code.

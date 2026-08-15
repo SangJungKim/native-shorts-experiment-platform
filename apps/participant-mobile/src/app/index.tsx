@@ -94,7 +94,7 @@ export default function HomeScreen() {
               </Pressable>
             </>
           )}
-          <Link href="/playback-spike" style={styles.link}>Diagnostic playback spike (not the assigned study)</Link>
+          {__DEV__ ? <Link href="/playback-spike" style={styles.link}>Diagnostic playback spike (not the assigned study)</Link> : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -29,6 +29,8 @@ The researcher interface is intended for desktop or standard web use. Researcher
 
 The participant interface is mobile-only. It presents full-screen Posts in a vertical short-video feed and records exposure and interaction behavior. The prototype does not require participant accounts or profiles.
 
+For low-friction external demonstrations, the same Expo participant interface may also be exported as a mobile-web application and opened through a public URL. The web delivery must preserve the same study-code, assignment, feed, creator, social-control, comments, and time-display presentation rather than introducing a separate design. Mobile Safari/Chrome playback, autoplay, page-visibility timing, viewport behavior, storage persistence, swipe paging, and audio isolation require their own physical-device validation; native validation does not establish web measurement validity.
+
 ## 4. Core concepts
 
 ### 4.1 Experiment
@@ -314,6 +316,7 @@ Export computations must be reproducible from retained data. CSV escaping, times
 
 - Researcher: Next.js with TypeScript
 - Participant: React Native with Expo, Expo Router, and TypeScript
+- Participant web demo: the same Expo/React Native Web interface, statically exported and deployed separately
 - Backend: Supabase with PostgreSQL
 - Video: YouTube embedded playback
 - No participant-created profile or identity system
