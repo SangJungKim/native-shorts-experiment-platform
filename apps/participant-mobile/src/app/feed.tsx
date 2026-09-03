@@ -148,6 +148,7 @@ export default function AssignedFeedScreen() {
 
   const activeIndexRef = useRef(-1);
   const activationTokenRef = useRef(0);
+  const swipeInProgressRef = useRef(false);
   const playerRefs = useRef<Record<string, PlayerRef>>({});
   const readyPlayersRef = useRef(new Set<string>());
   const elapsedSecondsRef = useRef(0);
@@ -325,6 +326,7 @@ export default function AssignedFeedScreen() {
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.max(0, Math.min(posts.length - 1, Math.round(event.nativeEvent.contentOffset.y / height)));
+    swipeInProgressRef.current = false;
     setSuspendedIndex(null);
     if (nextIndex === activeIndexRef.current) {
       const token = ++activationTokenRef.current;
@@ -333,6 +335,33 @@ export default function AssignedFeedScreen() {
       activatePost(nextIndex);
     }
   };
+
+  const pauseForSwipe = useCallback(() => {
+    const index = activeIndexRef.current;
+    if (index < 0 || swipeInProgressRef.current) return;
+    swipeInProgressRef.current = true;
+    const pauseToken = ++activationTokenRef.current;
+
+    // Give the controlled player a render with play=false so YouTube receives
+    // its pause command before the iframe is removed from the page.
+    setPlayingIndex(null);
+    setTimeout(() => {
+      if (
+        swipeInProgressRef.current
+        && activeIndexRef.current === index
+        && activationTokenRef.current === pauseToken
+      ) {
+        setSuspendedIndex(index);
+      }
+    }, 120);
+  }, []);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = activeIndexRef.current;
+    if (index < 0) return;
+    const activeOffset = index * height;
+    if (Math.abs(event.nativeEvent.contentOffset.y - activeOffset) > 2) pauseForSwipe();
+  }, [height, pauseForSwipe]);
 
   const toggleLike = async (post: FeedPost) => {
     const current = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
@@ -415,8 +444,10 @@ export default function AssignedFeedScreen() {
         getItemLayout={(_, index) => ({ index, length: height, offset: height * index })}
         keyExtractor={(post) => post.id}
         onMomentumScrollEnd={handleScrollEnd}
-        onScrollBeginDrag={() => { activationTokenRef.current += 1; setPlayingIndex(null); setSuspendedIndex(activeIndexRef.current); }}
+        onScroll={handleScroll}
+        onScrollBeginDrag={pauseForSwipe}
         pagingEnabled
+        scrollEventThrottle={16}
         renderItem={({ item: post, index }) => {
           const state = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
           const postCommentCount = comments.filter((comment) => comment.publication_post_id === post.id).length;
