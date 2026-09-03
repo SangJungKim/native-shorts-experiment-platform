@@ -134,6 +134,7 @@ export default function AssignedFeedScreen() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [postStates, setPostStates] = useState<Record<string, PostState>>({});
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [suspendedIndex, setSuspendedIndex] = useState<number | null>(null);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
@@ -308,6 +309,7 @@ export default function AssignedFeedScreen() {
     const previousIndex = activeIndexRef.current;
     setPlayingIndex(null);
     activeIndexRef.current = nextIndex;
+    setActiveIndex(nextIndex);
     const token = ++activationTokenRef.current;
     void recordInteraction(posts[nextIndex].id, "post_activated");
     if (previousIndex >= 0) {
@@ -421,7 +423,7 @@ export default function AssignedFeedScreen() {
           return (
             <View style={[styles.page, { height }]}>
               <View style={[styles.playerFrame, { height: frameHeight, width: frameWidth }]}>
-                {suspendedIndex === index ? <View style={styles.suspended} /> : (
+                {suspendedIndex === index || activeIndex !== index ? <View style={styles.suspended} /> : (
                   <YoutubePlayer
                     height={frameHeight}
                     initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
