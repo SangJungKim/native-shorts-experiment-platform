@@ -59,14 +59,14 @@ Development is sequential. Do not start a milestone until its prerequisites and 
 - Configure fixed or per-participant randomized Post order independently for each condition and provide a clearly non-recording example preview shuffle.
 - Create conditions and ordered Posts with YouTube URL parsing and validation.
 - Configure social signals and seeded comments.
-- Create reusable creator profiles, upload optional profile images, and assign a profile to every Post.
+- Create reusable creator profiles, optionally populate channel name/handle from a YouTube Short, upload optional profile images, and optionally assign a profile to a Post.
 - Duplicate conditions and Posts and reorder Posts.
 
 ### Acceptance criteria
 
 - A researcher can create a complete multi-condition draft without direct database work.
 - Original URLs are stored exactly as submitted and parsed IDs are stored separately.
-- Posts require no platform-authored description and require an assigned reusable creator profile.
+- Posts require no platform-authored description and may explicitly use no creator overlay.
 - Condition preview matches the participant feed’s creator and social-control presentation closely enough to inspect experimental stimuli before publication.
 - Duplicates receive independent identities and expected deep-copied child data.
 - Reordering persists deterministically.

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Milestone 5’s assigned-condition participant feed and interaction persistence are implemented and accepted on a physical iPhone. Android validation remains outstanding. Exposure and viewed-time measurement remain Milestone 6 work.
+Milestone 5’s assigned-condition participant feed and interaction persistence are implemented and accepted on a physical iPhone. Time-controlled sessions now stop at their configured budget and show a terminal completion screen. Android validation remains outstanding. Exposure and active viewed-time measurement remain Milestone 6 work.
 
 ## Completed
 
@@ -36,8 +36,14 @@ Milestone 5’s assigned-condition participant feed and interaction persistence 
 - Added `/feed`, which loads only the participant’s assigned publication snapshot and exact persisted Post order. Study-code entry now opens this assigned feed automatically; `/playback-spike` remains clearly labeled as a diagnostic route.
 - Reused the validated 9:16, 90%-width embedded-player behavior: swipe navigation pauses the prior player, every newly active Post seeks to `0:00`, captions are actively suppressed, the assigned creator profile is overlaid, and no platform-authored Post description is added.
 - Added participant like/unlike, comments open/close, and reversible repost controls. A selected heart or repost renders its configured count plus one and undo returns it to the configured count. Current state, historical share-tap state, and append-only select/undo events persist separately from immutable displayed likes, shares, and seeded comments.
-- Production exposure creation, active viewed-time measurement, comment-panel duration, session clocks/time indicators, and completion are intentionally not included; they remain Milestones 6–8.
+- Production exposure creation, active viewed-time measurement, and comment-panel duration remain Milestones 6–8 work.
 - Time-controlled experiments now configure participant time display independently for each condition. The condition preview runs a temporary one-second clock from zero and updates the selected progress/elapsed/remaining treatment; condition duplication preserves the treatment.
+- Time-controlled participant sessions now use the configured duration as a finite attention budget. At zero, playback is frozen, comments close, the session becomes `completed`, its elapsed time is fixed to the configured duration, and an append-only `experiment_completed` event records `time_budget_exhausted`. The participant sees a simple `Session complete` screen. Finalization is idempotent, and a connection failure keeps the feed frozen with a retry action.
+- Returning to an already-completed session shows the same completion screen. The existing completed participant/study rule continues to prevent repeat participation.
+- Completion currently cannot close an active exposure because production exposure/viewed-time recording has not yet been implemented; that remains an explicit Milestone 6 requirement.
+- Creator profiles are now optional per Post. The researcher can select `No creator profile`, which publishes null creator fields and produces no platform creator overlay in preview or the participant feed.
+- Creator authoring includes `Get profile from YouTube`: a researcher pastes a Shorts URL and the server-side YouTube embed-metadata lookup fills the channel display name and handle for review. Profile images and descriptions remain optional researcher inputs because the embed metadata does not expose a channel profile image.
+- The time-controlled completion and optional-creator migrations were reset and linted locally, all 97 pgTAP database tests passed, and both migrations were applied to linked hosted Supabase project `emffazwlvifexhklhdll` on October 22, 2026.
 
 - Milestone 1 repository bootstrap and quality baseline.
 - Added Supabase CLI 2.113.0 as a reproducible root development dependency and local database scripts.

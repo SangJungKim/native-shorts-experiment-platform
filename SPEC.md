@@ -61,7 +61,7 @@ A condition belongs to one experiment and contains an ordered list of Posts. It 
 - Researcher-defined Post name
 - Researcher-readable video title
 - Video duration in seconds
-- Assigned reusable creator profile
+- Optional assigned creator profile
 - Displayed number of likes
 - Displayed number of shares
 - Zero or more researcher-seeded comments
@@ -69,13 +69,13 @@ A condition belongs to one experiment and contains an ordered list of Posts. It 
 
 The original submitted YouTube URL is canonical research data. It must always be stored unchanged and included in exports alongside the parsed video ID. The system must not host or download the video.
 
-V0 does not add a platform-authored Post description. YouTube player chrome is masked at the presentation edges, and the participant feed presents the assigned researcher-configured creator profile as an explicit experimental stimulus.
+V0 does not add a platform-authored Post description. A Post may present an assigned researcher-configured creator profile as an explicit experimental stimulus or use no platform creator overlay.
 
 Researchers can create, duplicate, and reorder Posts. A duplicated Post copies the configured stimulus and social-signal fields but receives its own identity and position. The product must define whether copying seeded comments produces independent comment records; the recommended behavior is an independent deep copy.
 
 ### 4.4 Creator presentation
 
-Researchers can create creator profiles within each experiment containing a profile image, display name, handle, and optional profile description. One profile may be assigned to multiple Posts in that experiment but cannot be assigned across experiments. Creator presentation is researcher-configured experimental stimulus data, not participant identity. Publication snapshots and exports preserve the presented creator fields so later profile edits do not make collected data ambiguous.
+Researchers can create creator profiles within each experiment containing a profile image, display name, handle, and optional profile description. A YouTube Short URL can populate the channel display name and handle for researcher review; the profile image remains an optional upload. One profile may be assigned to multiple Posts in that experiment but cannot be assigned across experiments. Assignment is optional per Post. Creator presentation is researcher-configured experimental stimulus data, not participant identity. Publication snapshots and exports preserve either the presented creator fields or an explicit absence of a platform creator overlay so later profile edits do not make collected data ambiguous.
 
 Researchers may delete a creator profile from active authoring. V0 implements this as archival: a profile assigned to a Post in any active study must first be replaced. Posts belonging only to archived experiments do not block profile archival because their immutable publication snapshots retain the presented creator fields. Archival hides the profile from authoring without removing its stored image or historical publication context.
 
@@ -123,7 +123,7 @@ The researcher can:
 4. Create multiple conditions.
 5. Duplicate conditions.
 6. Create, duplicate, edit, delete, and reorder Posts within each condition.
-7. Create reusable creator profiles and assign one to every Post.
+7. Optionally create reusable creator profiles, including importing the channel name and handle from a YouTube Short, and assign them to selected Posts.
 8. Add and order seeded comments on Posts.
 9. Preview each condition in a mobile-style presentation matching the participant feed.
 10. Validate the complete experiment configuration.

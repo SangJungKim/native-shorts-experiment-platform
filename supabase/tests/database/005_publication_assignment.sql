@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(47);
+select plan(55);
 
 insert into public.experiments (
   id, owner_id, name, session_mode, session_duration_seconds
@@ -30,7 +30,7 @@ insert into public.posts (
 ) values
   ('65000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000001', '55000000-0000-0000-0000-000000000001', '45000000-0000-0000-0000-000000000001', 'https://www.youtube.com/shorts/aaaaaaaaaaa?feature=share', 'aaaaaaaaaaa', 10, 12, 3, 0),
   ('65000000-0000-0000-0000-000000000002', '35000000-0000-0000-0000-000000000001', '55000000-0000-0000-0000-000000000001', '45000000-0000-0000-0000-000000000001', 'https://www.youtube.com/shorts/bbbbbbbbbbb', 'bbbbbbbbbbb', 11, 14, 4, 1),
-  ('65000000-0000-0000-0000-000000000003', '35000000-0000-0000-0000-000000000001', '55000000-0000-0000-0000-000000000002', '45000000-0000-0000-0000-000000000001', 'https://www.youtube.com/shorts/ccccccccccc', 'ccccccccccc', 12, 16, 5, 0);
+  ('65000000-0000-0000-0000-000000000003', '35000000-0000-0000-0000-000000000001', '55000000-0000-0000-0000-000000000002', null, 'https://www.youtube.com/shorts/ccccccccccc', 'ccccccccccc', 12, 16, 5, 0);
 insert into public.seeded_comments (experiment_id, post_id, display_name, comment_text, position)
 values ('35000000-0000-0000-0000-000000000001', '65000000-0000-0000-0000-000000000001', 'Viewer', 'Comment', 0);
 
@@ -51,6 +51,7 @@ select is((select post_order_mode::text from public.publication_conditions where
 select is((select creator_display_name from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000001'), 'Study Creator', 'creator display name is snapshotted');
 select is((select creator_handle from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000001'), 'studycreator', 'creator handle is snapshotted');
 select is((select creator_profile_image_path from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000001'), '11111111-1111-4111-8111-111111111111/profile.png', 'creator image path is snapshotted');
+select is((select creator_profile_id from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000003'), null::uuid, 'a Post may publish without a creator profile');
 select is((select video_title from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000001'), 'aaaaaaaaaaa', 'researcher-readable video title is snapshotted');
 select is((select post_name from public.publication_posts where source_post_id = '65000000-0000-0000-0000-000000000001'), 'aaaaaaaaaaa', 'researcher-defined Post name is snapshotted');
 
@@ -117,8 +118,24 @@ select lives_ok(
 select isnt((select reposted from public.participant_post_state where session_id = (select session_id from joined_result)), true, 'undo clears current repost state');
 select ok((select share_tapped from public.participant_post_state where session_id = (select session_id from joined_result)), 'undo retains historical share-tapped state');
 select is((select count(*) from public.behavior_events where session_id = (select session_id from joined_result)), 7::bigint, 'each interaction remains as an append-only event');
-update public.sessions set status = 'completed', ended_at = now()
-where participant_id = '25000000-0000-0000-0000-000000000001';
+select throws_ok(
+  $$ select public.complete_time_controlled_session((select session_id from joined_result), 299, now()) $$,
+  '22023',
+  'Session time budget has not been exhausted',
+  'a time-controlled session cannot complete before its budget is exhausted'
+);
+select lives_ok(
+  $$ select public.complete_time_controlled_session((select session_id from joined_result), 300, now()) $$,
+  'a time-controlled session completes when its budget is exhausted'
+);
+select is((select status::text from public.sessions where id = (select session_id from joined_result)), 'completed', 'completion makes the session terminal');
+select is((select session_elapsed_seconds from public.sessions where id = (select session_id from joined_result)), 300.000::numeric, 'completion stores the exact configured duration');
+select ok((select ended_at is not null from public.sessions where id = (select session_id from joined_result)), 'completion records an end time');
+select is((select count(*) from public.behavior_events where session_id = (select session_id from joined_result) and event_type = 'experiment_completed'), 1::bigint, 'completion creates an append-only experiment-completed event');
+select lives_ok(
+  $$ select public.complete_time_controlled_session((select session_id from joined_result), 300, now()) $$,
+  'retrying completion is idempotent'
+);
 select throws_ok(
   $$ select * from public.join_study((select study_code from published_result)) $$,
   '23505',

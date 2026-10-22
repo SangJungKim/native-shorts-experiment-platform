@@ -105,6 +105,7 @@ type Comment = {
 };
 type PostState = { liked: boolean; reposted: boolean; shareTapped: boolean };
 type PlayerRef = { current: YoutubeIframeRef | null };
+type CompletionPhase = "active" | "completing" | "complete" | "error";
 
 const DISABLE_CAPTIONS_SCRIPT = `
   (function disableYouTubeCaptions() {
@@ -144,6 +145,8 @@ export default function AssignedFeedScreen() {
   const [error, setError] = useState("");
   const [studyEnded, setStudyEnded] = useState(false);
   const [displayElapsedSeconds, setDisplayElapsedSeconds] = useState(0);
+  const [completionPhase, setCompletionPhase] = useState<CompletionPhase>("active");
+  const [completionError, setCompletionError] = useState("");
 
   const activeIndexRef = useRef(-1);
   const activationTokenRef = useRef(0);
@@ -152,6 +155,7 @@ export default function AssignedFeedScreen() {
   const elapsedSecondsRef = useRef(0);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const lastActiveTickRef = useRef(0);
+  const completionStartedRef = useRef(false);
 
   const loadFeed = useCallback(async () => {
     if (!sessionId) throw new Error("The assigned session is missing.");
@@ -170,7 +174,18 @@ export default function AssignedFeedScreen() {
       session_duration_seconds: snapshotResult.data.session_duration_seconds,
       time_display: conditionResult.data.time_display,
     } as Session;
-    if (nextSession.status !== "started") throw new Error("This session is no longer active.");
+    if (nextSession.status !== "started") {
+      setSession(nextSession);
+      elapsedSecondsRef.current = nextSession.session_elapsed_seconds;
+      setDisplayElapsedSeconds(nextSession.session_elapsed_seconds);
+      if (nextSession.status === "completed") {
+        completionStartedRef.current = true;
+        setCompletionPhase("complete");
+      } else {
+        setStudyEnded(true);
+      }
+      return;
+    }
 
     const orderResult = await supabase.from("session_post_order").select("publication_post_id,presentation_position").eq("session_id", sessionId).order("presentation_position");
     if (orderResult.error) throw orderResult.error;
@@ -233,7 +248,14 @@ export default function AssignedFeedScreen() {
       if (!result.error && result.data.status !== "started") {
         setPlayingIndex(null);
         setSuspendedIndex(activeIndexRef.current);
-        setStudyEnded(true);
+        setCommentsPostId(null);
+        Keyboard.dismiss();
+        if (result.data.status === "completed") {
+          completionStartedRef.current = true;
+          setCompletionPhase("complete");
+        } else {
+          setStudyEnded(true);
+        }
       }
     };
     const poll = setInterval(() => void checkSession(), 3000);
@@ -241,12 +263,38 @@ export default function AssignedFeedScreen() {
   }, [session]);
 
   const persistSessionElapsed = useCallback(async () => {
-    if (!session) return;
+    if (!session || session.status !== "started" || completionStartedRef.current) return;
     await supabase.from("sessions").update({ session_elapsed_seconds: elapsedSecondsRef.current }).eq("id", session.id);
   }, [session]);
 
+  const completeTimeControlledSession = useCallback(async () => {
+    if (!session || session.session_mode !== "time_controlled" || session.session_duration_seconds === null) return;
+    completionStartedRef.current = true;
+    activationTokenRef.current += 1;
+    setPlayingIndex(null);
+    setSuspendedIndex(activeIndexRef.current);
+    setCommentsPostId(null);
+    Keyboard.dismiss();
+    setCompletionError("");
+    setCompletionPhase("completing");
+
+    const { error: completionFailure } = await supabase.rpc("complete_time_controlled_session", {
+      target_session_id: session.id,
+      target_session_elapsed_seconds: session.session_duration_seconds,
+      target_client_observed_at: new Date().toISOString(),
+    });
+    if (completionFailure) {
+      completionStartedRef.current = false;
+      setCompletionError(completionFailure.message);
+      setCompletionPhase("error");
+      return;
+    }
+    setSession((current) => current ? { ...current, status: "completed", session_elapsed_seconds: session.session_duration_seconds! } : current);
+    setCompletionPhase("complete");
+  }, [session]);
+
   useEffect(() => {
-    if (!session) return;
+    if (!session || session.status !== "started" || completionPhase !== "active") return;
     const accrueActiveTime = () => {
       const now = Date.now();
       if (appStateRef.current === "active") {
@@ -256,6 +304,14 @@ export default function AssignedFeedScreen() {
           : Math.min(session.session_duration_seconds, elapsedSecondsRef.current);
         elapsedSecondsRef.current = capped;
         setDisplayElapsedSeconds(capped);
+        if (
+          session.session_mode === "time_controlled"
+          && session.session_duration_seconds !== null
+          && capped >= session.session_duration_seconds
+          && !completionStartedRef.current
+        ) {
+          void completeTimeControlledSession();
+        }
       }
       lastActiveTickRef.current = now;
     };
@@ -274,7 +330,7 @@ export default function AssignedFeedScreen() {
       subscription.remove();
       void persistSessionElapsed();
     };
-  }, [persistSessionElapsed, session]);
+  }, [completeTimeControlledSession, completionPhase, persistSessionElapsed, session]);
 
   const recordInteraction = useCallback(async (postId: string, eventType: string) => {
     if (!session) return false;
@@ -397,6 +453,9 @@ export default function AssignedFeedScreen() {
 
   if (loading) return <View style={styles.center}><ActivityIndicator color="#7dffa4" /><Text style={styles.centerText}>Loading assigned feed…</Text></View>;
   if (error && !posts.length) return <SafeAreaView style={styles.center}><Text style={styles.error}>{error}</Text><Pressable style={styles.retryButton} onPress={() => router.replace("/")}><Text>Return to study code</Text></Pressable></SafeAreaView>;
+  if (completionPhase === "completing") return <SafeAreaView style={styles.center}><ActivityIndicator color="#7dffa4" /><Text style={styles.endedTitle}>Finishing your session…</Text><Text style={styles.centerText}>Please keep this screen open for a moment.</Text></SafeAreaView>;
+  if (completionPhase === "error") return <SafeAreaView style={styles.center}><Text style={styles.endedTitle}>We couldn’t finalize your session.</Text><Text style={styles.centerText}>Your video feed is paused. Check your connection, then try again.</Text>{completionError ? <Text style={styles.completionError}>{completionError}</Text> : null}<Pressable style={styles.retryButton} onPress={() => void completeTimeControlledSession()}><Text>Try again</Text></Pressable></SafeAreaView>;
+  if (completionPhase === "complete") return <SafeAreaView style={styles.center}><View style={styles.completionMark}><Text style={styles.completionMarkText}>✓</Text></View><Text style={styles.endedTitle}>Session complete</Text><Text style={styles.centerText}>Thank you for participating. You may now close this page.</Text></SafeAreaView>;
   if (studyEnded) return <SafeAreaView style={styles.center}><Text style={styles.endedTitle}>This study has ended.</Text><Text style={styles.centerText}>The researcher has deactivated this study. No further activity will be recorded.</Text><Pressable style={styles.retryButton} onPress={() => router.replace("/")}><Text>Return to study code</Text></Pressable></SafeAreaView>;
 
   const frameWidth = width * 0.9;
@@ -523,6 +582,9 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", backgroundColor: "#10231c", flex: 1, gap: 14, justifyContent: "center", padding: 24 },
   centerText: { color: "white" }, error: { color: "#ffb6af", fontSize: 15, textAlign: "center" },
   endedTitle: { color: "white", fontSize: 23, fontWeight: "800", textAlign: "center" },
+  completionMark: { alignItems: "center", backgroundColor: "#7dffa4", borderRadius: 32, height: 64, justifyContent: "center", width: 64 },
+  completionMarkText: { color: "#10231c", fontSize: 34, fontWeight: "900" },
+  completionError: { color: "#ffb6af", fontSize: 12, textAlign: "center" },
   retryButton: { backgroundColor: "#f2f5f1", borderRadius: 10, padding: 12 },
   errorBanner: { backgroundColor: "#8d2f28", color: "white", left: 10, padding: 8, position: "absolute", right: 10, top: 50, zIndex: 20 },
   modalBackdrop: { backgroundColor: "rgba(0,0,0,.55)", flex: 1, justifyContent: "flex-end" },

@@ -516,6 +516,30 @@ function CreatorProfilesEditor({ creatorProfiles, ownerId, experimentId, busy, r
   const [handle, setHandle] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeImporting, setYoutubeImporting] = useState(false);
+  const [youtubeImportMessage, setYoutubeImportMessage] = useState("");
+
+  const importFromYouTube = async () => {
+    setYoutubeImporting(true);
+    setYoutubeImportMessage("");
+    try {
+      const response = await fetch("/api/youtube-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: youtubeUrl }),
+      });
+      const result = await response.json() as { displayName?: string; handle?: string; error?: string };
+      if (!response.ok || !result.displayName || !result.handle) throw new Error(result.error || "YouTube creator information was incomplete.");
+      setDisplayName(result.displayName);
+      setHandle(result.handle);
+      setYoutubeImportMessage("Creator name and handle loaded. Review them before creating the profile.");
+    } catch (error) {
+      setYoutubeImportMessage(errorMessage(error));
+    } finally {
+      setYoutubeImporting(false);
+    }
+  };
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
@@ -565,6 +589,12 @@ function CreatorProfilesEditor({ creatorProfiles, ownerId, experimentId, busy, r
           </article>
         ))}
         {!creatorProfiles.length && <p className={styles.muted}>No creator profiles yet.</p>}
+      </div>
+      <div className={styles.creatorImport}>
+        <label>YouTube Short for creator lookup<input value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} placeholder="https://www.youtube.com/shorts/…" /></label>
+        <button disabled={youtubeImporting || !youtubeUrl.trim()} type="button" onClick={() => void importFromYouTube()}>{youtubeImporting ? "Getting profile…" : "Get profile from YouTube"}</button>
+        <span className={styles.fieldHint}>Loads the channel name and handle. YouTube embed metadata does not provide the channel profile image, so an image may still be uploaded below.</span>
+        {youtubeImportMessage && <span className={styles.fieldHint}>{youtubeImportMessage}</span>}
       </div>
       <form className={styles.creatorForm} onSubmit={create}>
         <input aria-label="Creator display name" placeholder="Display name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
@@ -1387,7 +1417,7 @@ function PostForm({ condition, position, creatorProfiles, busy, onCancel, runAct
   const [title, setTitle] = useState("");
   const [likes, setLikes] = useState("0");
   const [shares, setShares] = useState("0");
-  const [creatorProfileId, setCreatorProfileId] = useState(creatorProfiles[0]?.id ?? "");
+  const [creatorProfileId, setCreatorProfileId] = useState("");
   const [validation, setValidation] = useState("");
   const [metadataRequest, setMetadataRequest] = useState<YouTubeMetadataRequest | null>(null);
 
@@ -1416,12 +1446,11 @@ function PostForm({ condition, position, creatorProfiles, busy, onCancel, runAct
       if (!title.trim()) throw new Error("Video title is required.");
       const displayLikes = requireNonNegativeInteger(likes, "Displayed likes");
       const displayShares = requireNonNegativeInteger(shares, "Displayed shares");
-      if (!creatorProfileId) throw new Error("Create and select a creator profile first.");
       await runAction(async () => {
         const { error } = await supabase.from("posts").insert({
           experiment_id: condition.experiment_id,
           condition_id: condition.id,
-          creator_profile_id: creatorProfileId,
+          creator_profile_id: creatorProfileId || null,
           original_youtube_url: url,
           youtube_video_id: videoId,
           post_name: postName.trim(),
@@ -1454,7 +1483,7 @@ function PostForm({ condition, position, creatorProfiles, busy, onCancel, runAct
         <label>Video duration (seconds)<input type="number" min="0.001" step="0.001" value={duration} onChange={(event) => setDuration(event.target.value)} required /></label>
         <label>Displayed likes<input type="number" min="0" step="1" value={likes} onChange={(event) => setLikes(event.target.value)} required /></label>
         <label>Displayed shares<input type="number" min="0" step="1" value={shares} onChange={(event) => setShares(event.target.value)} required /></label>
-        <label>Creator profile<select value={creatorProfileId} onChange={(event) => setCreatorProfileId(event.target.value)} required><option value="">Select a profile</option>{creatorProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name} · @{profile.handle.replace(/^@/, "")}</option>)}</select></label>
+        <label>Creator profile<select value={creatorProfileId} onChange={(event) => setCreatorProfileId(event.target.value)}><option value="">No creator profile</option>{creatorProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name} · @{profile.handle.replace(/^@/, "")}</option>)}</select></label>
       </div>
       {metadataRequest && <YouTubeMetadataLoader key={`${metadataRequest.videoId}:${metadataRequest.requestId}`} videoId={metadataRequest.videoId} onMetadata={applyMetadata} onError={metadataError} />}
       {validation && <p className={styles.formError}>{validation}</p>}
@@ -1514,11 +1543,10 @@ function PostCard({ post, displayPosition, first, last, comments, creatorProfile
         description_source: "post_short_description" as const,
         display_likes: requireNonNegativeInteger(likes, "Displayed likes"),
         display_shares: requireNonNegativeInteger(shares, "Displayed shares"),
-        creator_profile_id: creatorProfileId,
+        creator_profile_id: creatorProfileId || null,
       };
       if (!postName.trim()) throw new Error("Post name is required.");
       if (!title.trim()) throw new Error("Video title is required.");
-      if (!creatorProfileId) throw new Error("Select a creator profile.");
       await runAction(async () => {
         const { error } = await supabase.from("posts").update(values).eq("id", post.id);
         if (error) throw error;
@@ -1559,7 +1587,7 @@ function PostCard({ post, displayPosition, first, last, comments, creatorProfile
               <label>Video duration (seconds)<input type="number" min="0.001" step="0.001" value={duration} onChange={(event) => setDuration(event.target.value)} required /></label>
               <label>Displayed likes<input type="number" min="0" step="1" value={likes} onChange={(event) => setLikes(event.target.value)} /></label>
               <label>Displayed shares<input type="number" min="0" step="1" value={shares} onChange={(event) => setShares(event.target.value)} /></label>
-              <label>Creator profile<select value={creatorProfileId} onChange={(event) => setCreatorProfileId(event.target.value)} required><option value="">Select a profile</option>{creatorProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name} · @{profile.handle.replace(/^@/, "")}</option>)}</select></label>
+              <label>Creator profile<select value={creatorProfileId} onChange={(event) => setCreatorProfileId(event.target.value)}><option value="">No creator profile</option>{creatorProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name} · @{profile.handle.replace(/^@/, "")}</option>)}</select></label>
             </div>
             {metadataRequest && <YouTubeMetadataLoader key={`${metadataRequest.videoId}:${metadataRequest.requestId}`} videoId={metadataRequest.videoId} onMetadata={applyMetadata} onError={metadataError} />}
             {validation && <p className={styles.formError}>{validation}</p>}

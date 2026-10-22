@@ -14,7 +14,7 @@ These rules govern future implementation work. They do not authorize implementat
 
 - Keep configured stimulus data, published snapshots, raw participant observations, and derived aggregates separate.
 - Never update displayed likes, shares, or comment likes in response to participant behavior.
-- Treat configured creator profiles as reusable stimulus data. Snapshot the presented creator fields at publication, use private Storage objects with narrowly authorized signed URLs, and mask conflicting YouTube identity chrome in both preview and participant presentation.
+- Treat configured creator profiles as optional reusable stimulus data. Snapshot the presented creator fields—or their deliberate absence—at publication, use private Storage objects with narrowly authorized signed URLs, and keep preview and participant presentation consistent.
 - Soft-delete creator profiles and retain their images for historical snapshots. Block archival while an editable Post still references the profile.
 - Store participant like/unlike, repost/repost-undo, historical share-tap, and comment-panel activity as distinct behavioral data. A selected participant reaction may render the configured count plus one, but must never write that increment into configured or published display counts.
 - Preserve the original YouTube URL exactly as entered, as well as the parsed video ID.

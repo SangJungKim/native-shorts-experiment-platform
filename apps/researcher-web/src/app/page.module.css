@@ -44,6 +44,9 @@
 .creatorCard small { color: #647169; }
 .creatorCard p { margin-top: 3px; overflow: hidden; color: #6d7972; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .creatorForm { display: grid; grid-template-columns: 1fr 1fr 1.5fr 1.5fr auto; align-items: end; gap: 8px; margin-top: 13px; }
+.creatorImport { display: grid; grid-template-columns: minmax(240px, 1fr) auto; align-items: end; gap: 8px; margin-top: 13px; padding: 12px; border: 1px solid #dce3dd; border-radius: 10px; background: #f8faf7; }
+.creatorImport label { display: grid; gap: 5px; }
+.creatorImport .fieldHint { grid-column: 1 / -1; }
 .fileField { font-size: 10px; }
 .fileField input { padding: 7px; font-size: 10px; }
 .sectionHeading { align-items: flex-end; }
@@ -191,5 +194,6 @@
   .previewBody { grid-template-columns: 1fr; justify-items: center; padding: 18px; }
   .phonePreview { width: min(360px, calc(100vw - 36px)); height: min(640px, calc((100vw - 36px) * 16 / 9)); }
   .previewGuide { width: 100%; }
-  .creatorForm { grid-template-columns: 1fr; }
+  .creatorForm, .creatorImport { grid-template-columns: 1fr; }
+  .creatorImport .fieldHint { grid-column: auto; }
 }
