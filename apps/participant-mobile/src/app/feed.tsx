@@ -136,7 +136,6 @@ export default function AssignedFeedScreen() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [postStates, setPostStates] = useState<Record<string, PostState>>({});
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -348,15 +347,12 @@ export default function AssignedFeedScreen() {
     return true;
   }, [session]);
 
-  const seekAndPlay = useCallback((index: number, token: number) => {
+  const seekToStart = useCallback((index: number, token: number) => {
     const post = posts[index];
     if (!post || activeIndexRef.current !== index || activationTokenRef.current !== token) return;
     const player = playerRefs.current[post.id]?.current;
     if (!player || !readyPlayersRef.current.has(post.id)) return;
     player.seekTo(0, true);
-    setTimeout(() => {
-      if (activeIndexRef.current === index && activationTokenRef.current === token) setPlayingIndex(index);
-    }, 150);
   }, [posts]);
 
   const activatePost = useCallback((nextIndex: number) => {
@@ -371,8 +367,8 @@ export default function AssignedFeedScreen() {
       const direction = nextIndex > previousIndex ? "swipe_up" : "swipe_down";
       void recordInteraction(posts[previousIndex].id, direction);
     }
-    setTimeout(() => seekAndPlay(nextIndex, token), 100);
-  }, [posts, recordInteraction, seekAndPlay]);
+    setTimeout(() => seekToStart(nextIndex, token), 100);
+  }, [posts, recordInteraction, seekToStart]);
 
   useEffect(() => {
     if (posts.length && activeIndexRef.current < 0) activatePost(0);
@@ -390,11 +386,10 @@ export default function AssignedFeedScreen() {
     if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
   }, []);
 
-  const enableSoundAndPlay = useCallback((index: number) => {
+  const playActivePost = useCallback((index: number) => {
     const post = posts[index];
     if (!post || activeIndexRef.current !== index) return;
     const player = playerRefs.current[post.id]?.current;
-    setSoundEnabled(true);
     setPlayingIndex(null);
     player?.seekTo(0, true);
     const token = ++activationTokenRef.current;
@@ -524,9 +519,9 @@ export default function AssignedFeedScreen() {
                   <YoutubePlayer
                     height={frameHeight}
                     initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
-                    mute={!soundEnabled || playingIndex !== index}
+                    mute={playingIndex !== index}
                     onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
-                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
+                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekToStart(index, activationTokenRef.current); }}
                     play={playingIndex === index}
                     ref={playerRefs.current[post.id]}
                     videoId={post.youtube_video_id}
@@ -534,9 +529,9 @@ export default function AssignedFeedScreen() {
                     width={youtubeCanvasWidth}
                   />
                 </View>
-                {!soundEnabled && activeIndexRef.current === index ? (
-                  <Pressable accessibilityLabel="Play video with sound" onPress={() => enableSoundAndPlay(index)} style={styles.soundPrompt}>
-                    <Text style={styles.soundPromptText}>Play with sound</Text>
+                {playingIndex !== index && activeIndexRef.current === index ? (
+                  <Pressable accessibilityLabel="Play video" onPress={() => playActivePost(index)} style={styles.playOverlay}>
+                    <View style={styles.playButton}><Text style={styles.playButtonText}>▶</Text></View>
                   </Pressable>
                 ) : null}
                 <View style={styles.actions}>
@@ -612,8 +607,9 @@ const styles = StyleSheet.create({
   timeText: { alignSelf: "flex-end", backgroundColor: "rgba(0,0,0,.66)", borderRadius: 999, color: "white", fontSize: 10, fontWeight: "800", marginTop: 5, overflow: "hidden", paddingHorizontal: 7, paddingVertical: 4 },
   page: { alignItems: "center", backgroundColor: "#111", justifyContent: "center" },
   playerFrame: { alignItems: "center", backgroundColor: "#000", borderColor: "#222", borderWidth: 1, justifyContent: "center", overflow: "hidden" },
-  soundPrompt: { backgroundColor: "rgba(0,0,0,.72)", borderColor: "rgba(255,255,255,.72)", borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7, position: "absolute", top: 14 },
-  soundPromptText: { color: "white", fontSize: 11, fontWeight: "800" },
+  playOverlay: { alignItems: "center", bottom: 0, justifyContent: "center", left: 0, position: "absolute", right: 0, top: 0 },
+  playButton: { alignItems: "center", backgroundColor: "rgba(0,0,0,.68)", borderColor: "rgba(255,255,255,.82)", borderRadius: 34, borderWidth: 1, height: 68, justifyContent: "center", width: 68 },
+  playButtonText: { color: "white", fontSize: 30, marginLeft: 4 },
   actions: { bottom: 18, gap: 14, position: "absolute", right: 11 },
   creatorOverlay: { alignItems: "center", bottom: 18, flexDirection: "row", left: 12, maxWidth: "70%", position: "absolute" },
   creatorImage: { borderColor: "white", borderRadius: 21, borderWidth: 1, height: 42, width: 42 },
