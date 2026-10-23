@@ -136,6 +136,7 @@ export default function AssignedFeedScreen() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [postStates, setPostStates] = useState<Record<string, PostState>>({});
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [suspendedIndex, setSuspendedIndex] = useState<number | null>(null);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -155,8 +156,6 @@ export default function AssignedFeedScreen() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const lastActiveTickRef = useRef(0);
   const completionStartedRef = useRef(false);
-  const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const swipeInProgressRef = useRef(false);
 
   const loadFeed = useCallback(async () => {
     if (!sessionId) throw new Error("The assigned session is missing.");
@@ -248,6 +247,7 @@ export default function AssignedFeedScreen() {
       const result = await supabase.from("sessions").select("status").eq("id", session.id).single();
       if (!result.error && result.data.status !== "started") {
         setPlayingIndex(null);
+        setSuspendedIndex(activeIndexRef.current);
         setCommentsPostId(null);
         Keyboard.dismiss();
         if (result.data.status === "completed") {
@@ -272,6 +272,7 @@ export default function AssignedFeedScreen() {
     completionStartedRef.current = true;
     activationTokenRef.current += 1;
     setPlayingIndex(null);
+    setSuspendedIndex(activeIndexRef.current);
     setCommentsPostId(null);
     Keyboard.dismiss();
     setCompletionError("");
@@ -347,72 +348,45 @@ export default function AssignedFeedScreen() {
     return true;
   }, [session]);
 
-  const seekToStart = useCallback((index: number, token: number) => {
+  const seekAndPlay = useCallback((index: number, token: number) => {
     const post = posts[index];
     if (!post || activeIndexRef.current !== index || activationTokenRef.current !== token) return;
     const player = playerRefs.current[post.id]?.current;
     if (!player || !readyPlayersRef.current.has(post.id)) return;
     player.seekTo(0, true);
+    setTimeout(() => {
+      if (activeIndexRef.current === index && activationTokenRef.current === token) setPlayingIndex(index);
+    }, 150);
   }, [posts]);
 
   const activatePost = useCallback((nextIndex: number) => {
+    if (nextIndex === activeIndexRef.current) return;
     const previousIndex = activeIndexRef.current;
     setPlayingIndex(null);
     activeIndexRef.current = nextIndex;
     const token = ++activationTokenRef.current;
-    if (nextIndex !== previousIndex) {
-      void recordInteraction(posts[nextIndex].id, "post_activated");
-    }
-    if (previousIndex >= 0 && nextIndex !== previousIndex) {
+    void recordInteraction(posts[nextIndex].id, "post_activated");
+    if (previousIndex >= 0) {
       const direction = nextIndex > previousIndex ? "swipe_up" : "swipe_down";
       void recordInteraction(posts[previousIndex].id, direction);
     }
-    setTimeout(() => seekToStart(nextIndex, token), 100);
-  }, [posts, recordInteraction, seekToStart]);
+    seekAndPlay(nextIndex, token);
+  }, [posts, recordInteraction, seekAndPlay]);
 
   useEffect(() => {
     if (posts.length && activeIndexRef.current < 0) activatePost(0);
   }, [activatePost, posts.length]);
 
-  const settleOnVisiblePost = useCallback((offsetY: number) => {
-    const nextIndex = Math.max(0, Math.min(posts.length - 1, Math.round(offsetY / height)));
-    activatePost(nextIndex);
-  }, [activatePost, height, posts.length]);
-
-  const suspendPlayersForSwipe = useCallback(() => {
-    swipeInProgressRef.current = true;
-    activationTokenRef.current += 1;
-    setPlayingIndex(null);
-    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
-  }, []);
-
-  const playActivePost = useCallback((index: number) => {
-    const post = posts[index];
-    if (!post || activeIndexRef.current !== index) return;
-    const player = playerRefs.current[post.id]?.current;
-    player?.seekTo(0, true);
-    setPlayingIndex(index);
-  }, [posts]);
-
-  const scheduleScrollSettle = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!swipeInProgressRef.current) return;
-    const offsetY = event.nativeEvent.contentOffset.y;
-    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
-    scrollSettleTimerRef.current = setTimeout(() => {
-      swipeInProgressRef.current = false;
-      settleOnVisiblePost(offsetY);
-    }, 180);
-  }, [settleOnVisiblePost]);
-
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
-    swipeInProgressRef.current = false;
-    settleOnVisiblePost(event.nativeEvent.contentOffset.y);
+    const nextIndex = Math.max(0, Math.min(posts.length - 1, Math.round(event.nativeEvent.contentOffset.y / height)));
+    setSuspendedIndex(null);
+    if (nextIndex === activeIndexRef.current) {
+      const token = ++activationTokenRef.current;
+      setTimeout(() => seekAndPlay(nextIndex, token), 100);
+    } else {
+      activatePost(nextIndex);
+    }
   };
-
-  useEffect(() => () => {
-    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
-  }, []);
 
   const toggleLike = async (post: FeedPost) => {
     const current = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
@@ -498,10 +472,7 @@ export default function AssignedFeedScreen() {
         getItemLayout={(_, index) => ({ index, length: height, offset: height * index })}
         keyExtractor={(post) => post.id}
         onMomentumScrollEnd={handleScrollEnd}
-        onMomentumScrollBegin={suspendPlayersForSwipe}
-        onScroll={scheduleScrollSettle}
-        onScrollBeginDrag={suspendPlayersForSwipe}
-        onScrollEndDrag={scheduleScrollSettle}
+        onScrollBeginDrag={() => { activationTokenRef.current += 1; setPlayingIndex(null); setSuspendedIndex(activeIndexRef.current); }}
         pagingEnabled
         renderItem={({ item: post, index }) => {
           const state = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
@@ -509,25 +480,20 @@ export default function AssignedFeedScreen() {
           return (
             <View style={[styles.page, { height }]}>
               <View style={[styles.playerFrame, { height: frameHeight, width: frameWidth }]}>
-                <View pointerEvents="none">
+                {suspendedIndex === index ? <View style={styles.suspended} /> : (
                   <YoutubePlayer
                     height={frameHeight}
                     initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
                     mute={playingIndex !== index}
                     onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
-                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekToStart(index, activationTokenRef.current); }}
+                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
                     play={playingIndex === index}
                     ref={playerRefs.current[post.id]}
                     videoId={post.youtube_video_id}
                     webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
                     width={youtubeCanvasWidth}
                   />
-                </View>
-                {playingIndex !== index && activeIndexRef.current === index ? (
-                  <Pressable accessibilityLabel="Play video" onPress={() => playActivePost(index)} style={styles.playOverlay}>
-                    <View style={styles.playButton}><Text style={styles.playButtonText}>▶</Text></View>
-                  </Pressable>
-                ) : null}
+                )}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
                     <HeartAffordance selected={state.liked} />
@@ -601,9 +567,7 @@ const styles = StyleSheet.create({
   timeText: { alignSelf: "flex-end", backgroundColor: "rgba(0,0,0,.66)", borderRadius: 999, color: "white", fontSize: 10, fontWeight: "800", marginTop: 5, overflow: "hidden", paddingHorizontal: 7, paddingVertical: 4 },
   page: { alignItems: "center", backgroundColor: "#111", justifyContent: "center" },
   playerFrame: { alignItems: "center", backgroundColor: "#000", borderColor: "#222", borderWidth: 1, justifyContent: "center", overflow: "hidden" },
-  playOverlay: { alignItems: "center", bottom: 0, justifyContent: "center", left: 0, position: "absolute", right: 0, top: 0 },
-  playButton: { alignItems: "center", backgroundColor: "rgba(0,0,0,.68)", borderColor: "rgba(255,255,255,.82)", borderRadius: 34, borderWidth: 1, height: 68, justifyContent: "center", width: 68 },
-  playButtonText: { color: "white", fontSize: 30, marginLeft: 4 },
+  suspended: { backgroundColor: "#000", flex: 1, width: "100%" },
   actions: { bottom: 18, gap: 14, position: "absolute", right: 11 },
   creatorOverlay: { alignItems: "center", bottom: 18, flexDirection: "row", left: 12, maxWidth: "70%", position: "absolute" },
   creatorImage: { borderColor: "white", borderRadius: 21, borderWidth: 1, height: 42, width: 42 },
