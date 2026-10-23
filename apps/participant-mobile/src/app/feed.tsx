@@ -390,6 +390,21 @@ export default function AssignedFeedScreen() {
     if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
   }, []);
 
+  const enableSoundAndPlay = useCallback((index: number) => {
+    const post = posts[index];
+    if (!post || activeIndexRef.current !== index) return;
+    const player = playerRefs.current[post.id]?.current;
+    setSoundEnabled(true);
+    setPlayingIndex(null);
+    player?.seekTo(0, true);
+    const token = ++activationTokenRef.current;
+    setTimeout(() => {
+      if (activeIndexRef.current === index && activationTokenRef.current === token) {
+        setPlayingIndex(index);
+      }
+    }, 50);
+  }, [posts]);
+
   const scheduleScrollSettle = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!swipeInProgressRef.current) return;
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -520,8 +535,8 @@ export default function AssignedFeedScreen() {
                   />
                 </View>
                 {!soundEnabled && activeIndexRef.current === index ? (
-                  <Pressable accessibilityLabel="Enable video sound" onPress={() => setSoundEnabled(true)} style={styles.soundPrompt}>
-                    <Text style={styles.soundPromptText}>Tap for sound</Text>
+                  <Pressable accessibilityLabel="Play video with sound" onPress={() => enableSoundAndPlay(index)} style={styles.soundPrompt}>
+                    <Text style={styles.soundPromptText}>Play with sound</Text>
                   </Pressable>
                 ) : null}
                 <View style={styles.actions}>
