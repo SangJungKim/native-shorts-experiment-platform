@@ -505,18 +505,20 @@ export default function AssignedFeedScreen() {
           return (
             <View style={[styles.page, { height }]}>
               <View style={[styles.playerFrame, { height: frameHeight, width: frameWidth }]}>
-                <YoutubePlayer
-                  height={frameHeight}
-                  initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
-                  mute={!soundEnabled || playingIndex !== index}
-                  onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
-                  onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
-                  play={playingIndex === index}
-                  ref={playerRefs.current[post.id]}
-                  videoId={post.youtube_video_id}
-                  webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
-                  width={youtubeCanvasWidth}
-                />
+                <View pointerEvents="none">
+                  <YoutubePlayer
+                    height={frameHeight}
+                    initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
+                    mute={!soundEnabled || playingIndex !== index}
+                    onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
+                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
+                    play={playingIndex === index}
+                    ref={playerRefs.current[post.id]}
+                    videoId={post.youtube_video_id}
+                    webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
+                    width={youtubeCanvasWidth}
+                  />
+                </View>
                 {!soundEnabled && activeIndexRef.current === index ? (
                   <Pressable accessibilityLabel="Enable video sound" onPress={() => setSoundEnabled(true)} style={styles.soundPrompt}>
                     <Text style={styles.soundPromptText}>Tap for sound</Text>

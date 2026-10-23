@@ -259,6 +259,7 @@ Final passing commands:
 
 - `npm install`
 - Replaced the iframe-removal playback handoff after production Safari testing produced black pages. Participant-web players now remain mounted; beginning a swipe immediately sets every player to paused and muted, and the settled player seeks to `0:00` before playback. The first video requests standards-compliant muted autoplay and shows a single `Tap for sound` control because mobile Safari does not reliably permit unprompted autoplay with audio. Participant lint, typecheck, and static web export pass; physical iPhone validation is still required for autoplay, outgoing-audio isolation, and A → B → C → B → A restart behavior.
+- Made the embedded YouTube surface ignore pointer gestures in the participant feed so mobile Safari sends vertical swipes directly to feed pagination without requiring a play/pause interaction first. Platform reaction controls and the explicit sound-enablement control remain interactive overlays. Participant lint, typecheck, and static web export pass; physical iPhone swipe validation remains required.
 - `npm run lint`
 - `npm run typecheck`
 - `npm test` — no workspace product tests exist yet, so the configured `--if-present` runner completed successfully
