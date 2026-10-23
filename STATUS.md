@@ -258,6 +258,7 @@ Final passing commands:
 - Added a researcher-defined Post name distinct from the imported YouTube video title. The name is editable in Post authoring, visible in the Post list, preserved in publication snapshots, and included in the preliminary participant CSV. Existing Posts inherit their current video title as the initial Post name. The local migration, schema lint, 84/84 pgTAP tests, researcher lint/typecheck, and production build pass.
 
 - `npm install`
+- Replaced the iframe-removal playback handoff after production Safari testing produced black pages. Participant-web players now remain mounted; beginning a swipe immediately sets every player to paused and muted, and the settled player seeks to `0:00` before playback. The first video requests standards-compliant muted autoplay and shows a single `Tap for sound` control because mobile Safari does not reliably permit unprompted autoplay with audio. Participant lint, typecheck, and static web export pass; physical iPhone validation is still required for autoplay, outgoing-audio isolation, and A → B → C → B → A restart behavior.
 - `npm run lint`
 - `npm run typecheck`
 - `npm test` — no workspace product tests exist yet, so the configured `--if-present` runner completed successfully

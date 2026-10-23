@@ -136,7 +136,7 @@ export default function AssignedFeedScreen() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [postStates, setPostStates] = useState<Record<string, PostState>>({});
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-  const [renderedPlayerIndex, setRenderedPlayerIndex] = useState<number | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -249,7 +249,6 @@ export default function AssignedFeedScreen() {
       const result = await supabase.from("sessions").select("status").eq("id", session.id).single();
       if (!result.error && result.data.status !== "started") {
         setPlayingIndex(null);
-        setRenderedPlayerIndex(null);
         setCommentsPostId(null);
         Keyboard.dismiss();
         if (result.data.status === "completed") {
@@ -274,7 +273,6 @@ export default function AssignedFeedScreen() {
     completionStartedRef.current = true;
     activationTokenRef.current += 1;
     setPlayingIndex(null);
-    setRenderedPlayerIndex(null);
     setCommentsPostId(null);
     Keyboard.dismiss();
     setCompletionError("");
@@ -364,7 +362,6 @@ export default function AssignedFeedScreen() {
   const activatePost = useCallback((nextIndex: number) => {
     const previousIndex = activeIndexRef.current;
     setPlayingIndex(null);
-    setRenderedPlayerIndex(nextIndex);
     activeIndexRef.current = nextIndex;
     const token = ++activationTokenRef.current;
     if (nextIndex !== previousIndex) {
@@ -390,7 +387,6 @@ export default function AssignedFeedScreen() {
     swipeInProgressRef.current = true;
     activationTokenRef.current += 1;
     setPlayingIndex(null);
-    setRenderedPlayerIndex(null);
     if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
   }, []);
 
@@ -509,20 +505,23 @@ export default function AssignedFeedScreen() {
           return (
             <View style={[styles.page, { height }]}>
               <View style={[styles.playerFrame, { height: frameHeight, width: frameWidth }]}>
-                {renderedPlayerIndex === index ? (
-                  <YoutubePlayer
-                    height={frameHeight}
-                    initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
-                    mute={false}
-                    onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
-                    onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
-                    play={playingIndex === index}
-                    ref={playerRefs.current[post.id]}
-                    videoId={post.youtube_video_id}
-                    webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
-                    width={youtubeCanvasWidth}
-                  />
-                ) : <View style={styles.suspended} />}
+                <YoutubePlayer
+                  height={frameHeight}
+                  initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
+                  mute={!soundEnabled || playingIndex !== index}
+                  onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
+                  onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
+                  play={playingIndex === index}
+                  ref={playerRefs.current[post.id]}
+                  videoId={post.youtube_video_id}
+                  webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
+                  width={youtubeCanvasWidth}
+                />
+                {!soundEnabled && activeIndexRef.current === index ? (
+                  <Pressable accessibilityLabel="Enable video sound" onPress={() => setSoundEnabled(true)} style={styles.soundPrompt}>
+                    <Text style={styles.soundPromptText}>Tap for sound</Text>
+                  </Pressable>
+                ) : null}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
                     <HeartAffordance selected={state.liked} />
@@ -596,7 +595,8 @@ const styles = StyleSheet.create({
   timeText: { alignSelf: "flex-end", backgroundColor: "rgba(0,0,0,.66)", borderRadius: 999, color: "white", fontSize: 10, fontWeight: "800", marginTop: 5, overflow: "hidden", paddingHorizontal: 7, paddingVertical: 4 },
   page: { alignItems: "center", backgroundColor: "#111", justifyContent: "center" },
   playerFrame: { alignItems: "center", backgroundColor: "#000", borderColor: "#222", borderWidth: 1, justifyContent: "center", overflow: "hidden" },
-  suspended: { backgroundColor: "#000", flex: 1, width: "100%" },
+  soundPrompt: { backgroundColor: "rgba(0,0,0,.72)", borderColor: "rgba(255,255,255,.72)", borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7, position: "absolute", top: 14 },
+  soundPromptText: { color: "white", fontSize: 11, fontWeight: "800" },
   actions: { bottom: 18, gap: 14, position: "absolute", right: 11 },
   creatorOverlay: { alignItems: "center", bottom: 18, flexDirection: "row", left: 12, maxWidth: "70%", position: "absolute" },
   creatorImage: { borderColor: "white", borderRadius: 21, borderWidth: 1, height: 42, width: 42 },
