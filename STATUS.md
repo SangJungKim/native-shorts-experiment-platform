@@ -44,6 +44,7 @@ Milestone 5’s assigned-condition participant feed and interaction persistence 
 - Creator profiles are now optional per Post. The researcher can select `No creator profile`, which publishes null creator fields and produces no platform creator overlay in preview or the participant feed.
 - Creator authoring includes `Get profile from YouTube`: a researcher pastes a Shorts URL and the server-side YouTube embed-metadata lookup fills the channel display name and handle for review. Profile images and descriptions remain optional researcher inputs because the embed metadata does not expose a channel profile image.
 - The time-controlled completion and optional-creator migrations were reset and linted locally, all 97 pgTAP database tests passed, and both migrations were applied to linked hosted Supabase project `emffazwlvifexhklhdll` on October 22, 2026.
+- Participant feed playback now mounts only the settled active Post’s YouTube iframe. Beginning a swipe immediately unmounts the player, preventing prior-page audio from surviving navigation; settling on any Post, including a revisit, mounts a fresh player, seeks to `0:00`, and requests playback. Scroll-end handling includes a web-compatible inactivity fallback. The configured condition-level time indicator remains overlaid above the feed for time-controlled conditions unless the researcher explicitly selects `Hidden`.
 
 - Milestone 1 repository bootstrap and quality baseline.
 - Added Supabase CLI 2.113.0 as a reproducible root development dependency and local database scripts.

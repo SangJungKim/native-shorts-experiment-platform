@@ -136,7 +136,7 @@ export default function AssignedFeedScreen() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [postStates, setPostStates] = useState<Record<string, PostState>>({});
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
-  const [suspendedIndex, setSuspendedIndex] = useState<number | null>(null);
+  const [renderedPlayerIndex, setRenderedPlayerIndex] = useState<number | null>(null);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -156,6 +156,8 @@ export default function AssignedFeedScreen() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const lastActiveTickRef = useRef(0);
   const completionStartedRef = useRef(false);
+  const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeInProgressRef = useRef(false);
 
   const loadFeed = useCallback(async () => {
     if (!sessionId) throw new Error("The assigned session is missing.");
@@ -247,7 +249,7 @@ export default function AssignedFeedScreen() {
       const result = await supabase.from("sessions").select("status").eq("id", session.id).single();
       if (!result.error && result.data.status !== "started") {
         setPlayingIndex(null);
-        setSuspendedIndex(activeIndexRef.current);
+        setRenderedPlayerIndex(null);
         setCommentsPostId(null);
         Keyboard.dismiss();
         if (result.data.status === "completed") {
@@ -272,7 +274,7 @@ export default function AssignedFeedScreen() {
     completionStartedRef.current = true;
     activationTokenRef.current += 1;
     setPlayingIndex(null);
-    setSuspendedIndex(activeIndexRef.current);
+    setRenderedPlayerIndex(null);
     setCommentsPostId(null);
     Keyboard.dismiss();
     setCompletionError("");
@@ -360,33 +362,57 @@ export default function AssignedFeedScreen() {
   }, [posts]);
 
   const activatePost = useCallback((nextIndex: number) => {
-    if (nextIndex === activeIndexRef.current) return;
     const previousIndex = activeIndexRef.current;
     setPlayingIndex(null);
+    setRenderedPlayerIndex(nextIndex);
     activeIndexRef.current = nextIndex;
     const token = ++activationTokenRef.current;
-    void recordInteraction(posts[nextIndex].id, "post_activated");
-    if (previousIndex >= 0) {
+    if (nextIndex !== previousIndex) {
+      void recordInteraction(posts[nextIndex].id, "post_activated");
+    }
+    if (previousIndex >= 0 && nextIndex !== previousIndex) {
       const direction = nextIndex > previousIndex ? "swipe_up" : "swipe_down";
       void recordInteraction(posts[previousIndex].id, direction);
     }
-    seekAndPlay(nextIndex, token);
+    setTimeout(() => seekAndPlay(nextIndex, token), 100);
   }, [posts, recordInteraction, seekAndPlay]);
 
   useEffect(() => {
     if (posts.length && activeIndexRef.current < 0) activatePost(0);
   }, [activatePost, posts.length]);
 
+  const settleOnVisiblePost = useCallback((offsetY: number) => {
+    const nextIndex = Math.max(0, Math.min(posts.length - 1, Math.round(offsetY / height)));
+    activatePost(nextIndex);
+  }, [activatePost, height, posts.length]);
+
+  const suspendPlayersForSwipe = useCallback(() => {
+    swipeInProgressRef.current = true;
+    activationTokenRef.current += 1;
+    setPlayingIndex(null);
+    setRenderedPlayerIndex(null);
+    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
+  }, []);
+
+  const scheduleScrollSettle = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!swipeInProgressRef.current) return;
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
+    scrollSettleTimerRef.current = setTimeout(() => {
+      swipeInProgressRef.current = false;
+      settleOnVisiblePost(offsetY);
+    }, 180);
+  }, [settleOnVisiblePost]);
+
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const nextIndex = Math.max(0, Math.min(posts.length - 1, Math.round(event.nativeEvent.contentOffset.y / height)));
-    setSuspendedIndex(null);
-    if (nextIndex === activeIndexRef.current) {
-      const token = ++activationTokenRef.current;
-      setTimeout(() => seekAndPlay(nextIndex, token), 100);
-    } else {
-      activatePost(nextIndex);
-    }
+    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
+    swipeInProgressRef.current = false;
+    settleOnVisiblePost(event.nativeEvent.contentOffset.y);
   };
+
+  useEffect(() => () => {
+    if (scrollSettleTimerRef.current) clearTimeout(scrollSettleTimerRef.current);
+  }, []);
 
   const toggleLike = async (post: FeedPost) => {
     const current = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
@@ -472,7 +498,10 @@ export default function AssignedFeedScreen() {
         getItemLayout={(_, index) => ({ index, length: height, offset: height * index })}
         keyExtractor={(post) => post.id}
         onMomentumScrollEnd={handleScrollEnd}
-        onScrollBeginDrag={() => { activationTokenRef.current += 1; setPlayingIndex(null); setSuspendedIndex(activeIndexRef.current); }}
+        onMomentumScrollBegin={suspendPlayersForSwipe}
+        onScroll={scheduleScrollSettle}
+        onScrollBeginDrag={suspendPlayersForSwipe}
+        onScrollEndDrag={scheduleScrollSettle}
         pagingEnabled
         renderItem={({ item: post, index }) => {
           const state = postStates[post.id] ?? { liked: false, reposted: false, shareTapped: false };
@@ -480,11 +509,11 @@ export default function AssignedFeedScreen() {
           return (
             <View style={[styles.page, { height }]}>
               <View style={[styles.playerFrame, { height: frameHeight, width: frameWidth }]}>
-                {suspendedIndex === index ? <View style={styles.suspended} /> : (
+                {renderedPlayerIndex === index ? (
                   <YoutubePlayer
                     height={frameHeight}
                     initialPlayerParams={{ controls: false, iv_load_policy: 3, preventFullScreen: true, showClosedCaptions: false }}
-                    mute={playingIndex !== index}
+                    mute={false}
                     onChangeState={(playerState: PLAYER_STATES) => { if (playerState === PLAYER_STATES.ENDED && activeIndexRef.current === index) setPlayingIndex(null); }}
                     onReady={() => { readyPlayersRef.current.add(post.id); if (activeIndexRef.current === index) seekAndPlay(index, activationTokenRef.current); }}
                     play={playingIndex === index}
@@ -493,7 +522,7 @@ export default function AssignedFeedScreen() {
                     webViewProps={{ injectedJavaScript: DISABLE_CAPTIONS_SCRIPT }}
                     width={youtubeCanvasWidth}
                   />
-                )}
+                ) : <View style={styles.suspended} />}
                 <View style={styles.actions}>
                   <Pressable accessibilityLabel={state.liked ? "Unlike Post" : "Like Post"} onPress={() => void toggleLike(post)} style={styles.actionButton}>
                     <HeartAffordance selected={state.liked} />
