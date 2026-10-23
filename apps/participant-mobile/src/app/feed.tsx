@@ -390,14 +390,8 @@ export default function AssignedFeedScreen() {
     const post = posts[index];
     if (!post || activeIndexRef.current !== index) return;
     const player = playerRefs.current[post.id]?.current;
-    setPlayingIndex(null);
     player?.seekTo(0, true);
-    const token = ++activationTokenRef.current;
-    setTimeout(() => {
-      if (activeIndexRef.current === index && activationTokenRef.current === token) {
-        setPlayingIndex(index);
-      }
-    }, 50);
+    setPlayingIndex(index);
   }, [posts]);
 
   const scheduleScrollSettle = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
